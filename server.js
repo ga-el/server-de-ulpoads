@@ -30,11 +30,14 @@ app.post('/upload', upload.single('video'), async (req, res) => {
   const inputPath = req.file.path;
   const outputPath = `compressed_${uuidv4()}.mp4`;
 
-  // Comprimir video
+  // Comprimir video sin deformar
   ffmpeg(inputPath)
-    .size('1280x720')         // Resolución 720p
+    .outputOptions([
+      '-vf',
+      'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2'
+    ])
     .fps(30)                 // 30 fps
-    .videoBitrate('300k')    // Bitrate bajo
+    .videoBitrate('800k')    // bitrate ajustado (puedes bajarlo si quieres menos peso)
     .output(outputPath)
     .on('end', async () => {
       try {
@@ -48,8 +51,9 @@ app.post('/upload', upload.single('video'), async (req, res) => {
         fs.unlinkSync(inputPath);
         fs.unlinkSync(outputPath);
 
-    res.json({ success: true, videoUrl: result.secure_url });
-    } catch (error) {
+        res.json({ success: true, videoUrl: result.secure_url });
+      } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Error al subir a Cloudinary' });
       }
     })
